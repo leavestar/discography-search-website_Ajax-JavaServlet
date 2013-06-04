@@ -1,0 +1,414 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN"
+"http://www.w3.org/TR/REC-html40/strict.dtd">
+<html>
+	<head>
+		<style type="text/css">
+		.main{font-family:Arial,sans-serif;}
+		table.form{border:3px solid black;width:500px;height:300px;border-collapse:separate;font-size: 20px}
+		label{padding-left:15px;}
+		td.first{padding-top:18px;}
+		td.last{padding-bottom:18px;}
+		</style>
+
+		<script type="text/javascript">
+		var xhr=false;
+		var selectedType;
+		var typedTitle;
+		
+		function titleCheck()
+		{
+			typedTitle=document.getElementById('myform').title.value.trim();
+			selectedType=document.getElementById('myform').type.options[document.getElementById('myform').type.selectedIndex].value;
+			if(typedTitle!="")
+			{
+				initAll();
+				return true;
+			}
+			document.getElementById("dynamic_area").innerHTML="ERROR: Please refine your search.";
+			document.getElementById('myform').title.focus();
+			return false;
+		}
+		function initAll()
+		{
+			if(window.XMLHttpRequest)
+			{
+				xhr=new XMLHttpRequest();
+			}
+			else
+			{
+				try 
+				{  
+					xhr = new ActiveXObject("Microsoft.XMLHTTP"); 
+				}  
+				catch(e)
+				{
+					try
+					{
+						xhr = new ActiveXObject("Msxml2.XMLHTTP");
+					}
+					catch(e){xhr=false;}
+				} 
+			}
+			if(xhr)
+			{
+				var url="../servlet/HelloWorldExample?title="+typedTitle+"&type="+selectedType;
+				xhr.onreadystatechange = myCallback;
+				xhr.open("GET",url,true);
+				xhr.setRequestHeader("Connection", "Close"); 
+				xhr.setRequestHeader("Method", "GET" + url + "HTTP/1.1");
+           		xhr.send(null);
+           	}
+			else
+			{
+				document.getElementById("dynamic_area").innerHTML="ERROR: Couldn't load XML.";
+			}
+		}
+
+		function myCallback()
+		{
+			var html_text="";
+			if(xhr.readyState==4)
+			{
+				if(xhr.status==200)
+				{
+					if(xhr.responseText=="MalformedURLException")
+					{
+						html_text="ERROR: Java Servlet catch MalformedURLException.";
+					}
+					else if(xhr.responseText=="JDOMException")
+					{
+						html_text="ERROR: Java Servlet catch JDOMException.";
+					}
+					else if(xhr.responseText=="IOException")
+					{
+						html_text="ERROR: Java Servlet catch IOException.";
+					}
+					else if(xhr.responseText=="OTHERException")
+					{
+						html_text="ERROR: Java Servlet catch a Exception.";
+					}
+					else
+					{
+						var json_content=eval("("+ xhr.responseText +")");
+						
+						if(json_content.error)
+						{
+							html_text="ERROR: Json file is invalid.";
+						}
+						else
+						{
+							var node=json_content.results.result;
+							if(node.length==0)
+							{
+								html_text="<p style='font-size:28px; text-align:center;'><b>No discography found!</b></p>";
+							}
+							else
+							{
+								html_text+="<div style='font-family:Times New Roman,Times, serif;'>";
+								html_text+="<h1 style='font-size:23px; text-align:center;'><b>Search Result</b></h1>";
+								html_text+="<p style='text-align:center;'><b>\""+typedTitle+"\" of type \" "+selectedType+"\"</b></p>";
+								html_text+=headerGenerator();
+								if(selectedType=="artists")
+								{
+									html_text+=artistsGenerator(node);
+								}
+								else if(selectedType=="albums")
+								{
+									html_text+=albumsGenerator(node);
+								}
+								else if(selectedType=="songs")
+								{
+									html_text+=songsGenerator(node);
+								}
+							}
+						}
+							
+					}
+				}
+				else
+				{
+					html_text="<p stype='font-size:20px;'>ERROR: "+xhr.status+" with the request. </p>";
+				}				
+				document.getElementById("dynamic_area").innerHTML=html_text;
+			}
+		}
+		
+		function artistsGenerator(node)
+		{
+			var html_body="";
+			for(var i=0;i<node.length;i++)
+			{
+				html_body+="<tr><td style='padding-top:10px;padding-bottom:10px;padding-left:15px;padding-right:15px;'>";
+				if(node[i].cover!="NA")
+				{
+					html_body+="<img src='"+node[i].cover+"' width=100px></td><td>";
+				}
+				else
+				{
+					html_body+="<img src='http://cs-server.usc.edu:38512/noImage_artist.png'></td><td>";
+				}
+				html_body+=node[i].name+"</td><td>"+node[i].genre+"</td><td>"+node[i].year;
+				if(node[i].details!="NA")
+				{
+					html_body+="</td><td><a href='"+node[i].details+"'>details</a></td><td>";
+				}
+				else
+				{
+					html_body+="</td><td>NA</td><td>";
+				}
+				html_body+="<img src='http://cs-server.usc.edu:38512/facebook.jpg' height='48' width='113' onclick=\"postToFeed_artists(&quot;";
+				html_body+=HtmlEncode(node[i].cover)+"&quot;,&quot;"+HtmlEncode(node[i].name)+"&quot;,&quot;"+HtmlEncode(node[i].genre)+"&quot;,&quot;"+HtmlEncode(node[i].year)+"&quot;,&quot;";
+				html_body+=HtmlEncode(node[i].details)+"&quot;)\"></td></tr>";
+			}
+			html_body+="</table>";
+			return html_body;
+		}
+
+		function albumsGenerator(node)
+		{
+			var html_body="";
+			for(var i=0;i<node.length&&i<5;i++)
+			{
+				html_body+="<tr><td style='padding-top:10px;padding-bottom:10px;padding-left:15px;padding-right:15px;'>";
+				if(node[i].cover!="NA")
+				{
+					html_body+="<img src='"+node[i].cover+"' width=100px></td><td>";
+				}
+				else
+				{ 
+					html_body+="<img src='http://cs-server.usc.edu:38512/noImage_album.png'></td><td>";
+				}
+				html_body+=node[i].title+"</td><td>"+node[i].artist+"</td><td>"+node[i].genre+"</td><td>"+node[i].year;
+				if(node[i].details!="NA")
+				{
+					html_body+="</td><td><a href='"+node[i].details+"'>details</a></td><td>";
+				}
+				else
+				{
+					html_body+="</td><td>NA</td><td>";
+				}
+				html_body+="<img src='http://cs-server.usc.edu:38512/facebook.jpg' height='48' width='113' onclick=\"postToFeed_albums(&quot;";
+				html_body+=HtmlEncode(node[i].cover)+"&quot;,&quot;"+HtmlEncode(node[i].title)+"&quot;,&quot;"+HtmlEncode(node[i].artist)+"&quot;,&quot;"+HtmlEncode(node[i].genre)+"&quot;,&quot;"+HtmlEncode(node[i].year)+"&quot;,&quot;"; 
+				html_body+=HtmlEncode(node[i].details)+"&quot;)\"></td></tr>";
+			}
+			html_body+="</table>";
+			return html_body;
+		}
+		
+		function songsGenerator(node)
+		{
+			var html_body="";
+			for(var i=0;i<node.length&&i<5;i++)
+			{
+				if(node[i].sample!=null)
+				{
+					html_body+="<tr><td style='padding-top:10px;padding-bottom:10px;padding-left:15px;padding-right:15px;'>";
+					html_body+="<a href='"+node[i].sample+"'><img src='http://cs-server.usc.edu:38512/noImage_song.png'></a></td><td>";
+				}
+				else
+				{
+					html_body+="<tr><td style='padding-top:10px;padding-bottom:10px;padding-left:15px;padding-right:15px;'>";
+					html_body+="<img src='http://cs-server.usc.edu:38512/noImage_song.png'> </td><td>";	
+				}
+				html_body+=node[i].title+"</td><td>"+node[i].composers+"</td><td>"+node[i].performer;
+
+				if(node[i].details!="NA")
+				{
+					html_body+="</td><td><a href='"+node[i].details+"'>details</a></td><td>";
+				}
+				else
+				{
+					html_body+="</td><td>NA</td><td>";
+				}
+				
+				html_body+="<img src='http://cs-server.usc.edu:38512/facebook.jpg' height='48' width='113' onclick=\"postToFeed_songs(&quot;";
+				html_body+=HtmlEncode(node[i].sample)+"&quot;,&quot;" +HtmlEncode(node[i].title)+"&quot;,&quot;"+HtmlEncode(node[i].performer)+ "&quot;,&quot;" +HtmlEncode(node[i].composers)+"&quot;,&quot;"; 
+				html_body+=HtmlEncode(node[i].details)+"&quot;)\"></td></tr>";				
+			}
+			html_body+="</table>";
+			return html_body;
+		}
+		
+
+		function headerGenerator()
+		{
+			var html_head="";
+			if(selectedType=="artists")
+			{
+				html_head+="<table border='1' align='center' valign='center' style='text-align:center;'>";
+				html_head+="<tr><th height=30px width=130px>Cover</th><th width=130px>Name</th><th width=130px>Genre(s)</th>";
+				html_head+="<th width=130px>Year(s)</th><th width=130px>Details</th><th width=160>Post To Facebook</th></tr>";
+			}
+			else if(selectedType=="albums")
+			{
+				html_head+="<table border='1' align='center' valign='center' style='text-align:center;'>";
+				html_head+="<tr><th height=30px width=130px>Cover</th><th width=130px>Title</th><th width=130px>Artist</th>";
+				html_head+="<th width=130px>Genre(s)</th><th width=130px>Year(s)</th><th width=130px>Details</th><th width=160>Post To Facebook</th></tr>";
+			}
+			else if(selectedType=="songs")
+			{
+				html_head+="<table border='1' align='center' valign='center' style='text-align:center;'>";
+				html_head+="<tr><th height=30px width=130px>Sample</th><th width=130px>Title</th><th width=130px>Performer</th>";
+				html_head+="<th width=130px>Composer(s)</th><th width=130px>Details</th><th width=160>Post To Facebook</th></tr>";
+			}	
+			return html_head;		
+		}
+		
+		
+		function HtmlEncode(str)
+		{
+			str=str.replace(/\'/g,"&apos;");
+			str=str.replace(/&quot;/g,"&apos;");
+			return str;
+		}
+		
+		function postToFeed_artists(cover,name,genre,year,details)
+		{
+			if(cover=="NA")
+			{
+				cover="http://cs-server.usc.edu:38512/noImage_artist.png";
+			}
+			FB.ui( {
+			method: 'feed',
+			name: name,
+			caption: 'I like '+name+' who is active since year'+year, 
+			description: (
+			'Genre of Music is: '+genre
+			),
+			link: details, 
+			picture: cover,
+			properties:{'Look at details: ':{text:"here",href:details} }
+			}, 
+			function(response) 
+			{
+				/*if (response && response.post_id)
+				{
+					alert('Post was published.');
+				}
+				else
+				{
+					alert('Post was not published.');
+				}*/
+			}
+			);	
+		}
+		function postToFeed_albums(cover,title,artist,genre,year,details)
+		{
+			if(cover=="NA")
+			{
+				cover="http://cs-server.usc.edu:38512/noImage_album.png";
+			}
+			FB.ui( {
+			method: 'feed',
+			name: title,
+			caption: 'I like '+title+' released in '+year, 
+			description: (
+			'Artist: '+artist+' Genre: '+genre
+			),
+			link: details, 
+			picture: cover,
+			properties:{'Look at details: ':{text:"here",href:details} }
+			}, 
+			function(response) 
+			{
+				/*if (response && response.post_id)
+				{
+					alert('Post was published.');
+				}
+				else
+				{
+					alert('Post was not published.');
+				}*/
+			}
+			);	
+		}
+		function postToFeed_songs(sample,title,performer,composers,details)
+		{
+			FB.ui( {
+			method: 'feed',
+			name: title,
+			caption: 'I like '+title+' composed by '+composers, 
+			description: (
+			'Performer: '+performer
+			),
+			link: details, 
+			properties:{'Look at details: ':{text:"here",href:details} }
+			}, 
+			function(response) 
+			{
+				/*if (response && response.post_id)
+				{
+					alert('Post was published.');
+				}
+				else
+				{
+					alert('Post was not published.');
+				}*/
+			}
+			);	
+		}
+		
+		</script>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	</head>
+	<body>
+		<script>
+		window.fbAsyncInit = function() 
+		{ 
+			FB.init({
+			appId : '354599031326885',
+			channelUrl : '//cs-server.usc.edu:38513/examples/servlets/channel.html', 
+			status : true, 
+			cookie: true 
+					});
+		};
+
+		(function(d, s, id)
+		{
+			var js, fjs = d.getElementsByTagName(s)[0]; 
+			if (d.getElementById(id)) {return;}
+			js = d.createElement(s); 
+			js.id = id;
+			js.src = "//connect.facebook.net/en_US/all.js";
+			//js.src = "//connect.facebook.net/en_US/all.js"; 
+			fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk')); 
+		
+		</script>
+		
+		<div align="center" class="main" style="color:#5478E4">
+		<h1 style="font-size:40px"><b>Discography Search</b></h1>
+		<form name="discoform" id="myform" onsubmit="titleCheck(); return false;">
+				<table class="form">
+					<tr >
+						<td class="first"><label for="title">Title: </label></td>
+						<td class="first"><input type="text" size="100" maxlength="255" style="width:240px;height:18px; margin-left:120px;" name="title"></td>
+					</tr>
+					<tr>
+						<td ><label for="type">Type: </label></td>
+						<td ><select name="type" style="margin-left:120px; font-size:17px;">
+							<option selected value="artists">Artists</option>
+							<option value="albums">Albums</option>
+							<option value="songs">Songs</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td class="last"> </td>
+						<td class="last" style="padding-bottom:18px; text-align:right;"><input type="submit"  value="Search"  style="font-size:17px; margin-right:200px;" onclick="titleCheck()" ></td>
+					</tr>
+				</table>
+			<div id="dynamic_area">
+			</div>
+		</form>
+		</div>
+		<noscript>
+	</body>
+</html>
+
+
+
+
+
+
+
