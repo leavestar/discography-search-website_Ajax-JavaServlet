@@ -2,6 +2,7 @@ discography-search-website_Ajax-JavaServlet
 ===========================================
 
 an allmusic based discography search website, using Javascript, PHP, JavaServlet, JSON, HTML, CSS
+by Heguang Liu(heguangl@usc.edu) 
 
 file description:
 discography_search2.html:
